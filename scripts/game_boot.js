@@ -1,28 +1,29 @@
-// #4
-let config;
-let game;
-
-// ゲーム画面サイズ
-const D_WIDTH = 800;
-const D_HEIGHT = 600;
+// ゲーム画面サイズ (16:9)
+const D_WIDTH = 1900; // 例えば1600ピクセル
+const D_HEIGHT = 900; // 例えば900ピクセル
 
 // ページ読み込み完了時に実行
 window.onload = function() {
     // ゲームの設定値
     config = {
         type: Phaser.AUTO,
-        width: D_WIDTH, // 画面横幅
-        height: D_HEIGHT, // 画面縦幅
-        physics: { // 物理演算設定(使用する場合)
-            default: 'arcade', // 使用する物理エンジン
+        scale: {
+            mode: Phaser.Scale.FIT, // 画面に合わせてスケーリング
+            parent: 'phaser-example',
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+            width: D_WIDTH,
+            height: D_HEIGHT
+        },
+        physics: {
+            default: 'arcade',
             arcade: {
                 gravity: {
                     y: 0
-                }, // 重力
-                debug: true // デバックモード
+                },
+                debug: true
             }
         },
-        scene: MainScene // デフォルトシーン
+        scene: MainScene
     };
     // ゲーム開始
     game = new Phaser.Game(config);
