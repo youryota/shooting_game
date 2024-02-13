@@ -1,6 +1,7 @@
 class MainScene extends Phaser.Scene {
     constructor() {
         super('MainScene');
+        this.playerLife = 3;
     }
 
     preload() {
@@ -14,9 +15,14 @@ class MainScene extends Phaser.Scene {
     create() {
         const background = this.add.image(D_WIDTH / 2, D_HEIGHT / 2, 'background');
         background.setDisplaySize(D_WIDTH, D_HEIGHT);
-        
+
         const player = this.physics.add.sprite(D_WIDTH / 2, 700, 'player');
         this.player = player;
+
+        const enemy = this.physics.add.sprite(D_WIDTH / 2, 100, 'enemy');
+        enemy.angle = 180;
+        this.enemy = enemy;
+
         this.physics.world.setBounds(0, 0, D_WIDTH, D_HEIGHT);
         player.setCollideWorldBounds(true);
 
@@ -31,6 +37,8 @@ class MainScene extends Phaser.Scene {
         this.bullets.children.iterate(child => {
             child.setActive(false).setVisible(false);
         });
+
+         const enemyInitialRotation = this.enemy.angle;
     }
 
     arrow_move(cursors, object) {
@@ -46,8 +54,10 @@ class MainScene extends Phaser.Scene {
             object.setVelocity(0, 0);
         }
     }
+    
 
     update(time, delta) {
+
         let cursors = this.input.keyboard.createCursorKeys();
         this.arrow_move(cursors, this.player);
 
@@ -67,5 +77,15 @@ class MainScene extends Phaser.Scene {
                 }
             }
         });
+
+        this.physics.overlap(this.player, this.enemy, this.enemyCollision, null, this);
+
+        // 敵の動き
+        let direction = new Phaser.Math.Vector2(this.player.x - this.enemy.x, this.player.y - this.enemy.y);
+        direction.normalize();
+        this.enemy.setVelocity(direction.x * 200, direction.y * 200);
+
+        
+
     }
 }
