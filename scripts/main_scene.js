@@ -42,6 +42,11 @@ class MainScene extends Phaser.Scene {
         const enemy2 = this.physics.add.sprite(D_WIDTH / 2, 100, 'enemy2');
     
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.spaceText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press SPACE to start', { fontSize: '32px', fill: '#fff' });
+        this.spaceText.setOrigin(0.5);
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.startGame();
+        });
 
         this.bullets = this.physics.add.group({
             defaultKey: 'bullet',
@@ -65,6 +70,11 @@ class MainScene extends Phaser.Scene {
         this.restartText.setVisible(false); // 最初は非表示にしておく
     }
 
+    startGame() {
+        this.spaceText.setVisible(false);
+        this.gameStarted = true;
+    }
+
     arrow_move(cursors, object) {
         if (this.playerCanMove) {
             if (cursors.up.isDown) {
@@ -84,6 +94,8 @@ class MainScene extends Phaser.Scene {
     }
 
     update(time, delta) {
+        if (!this.gameStarted) return;
+        
         this.physics.overlap(this.bullets, this.enemy, this.bulletEnemyCollision, null, this);
         let cursors = this.input.keyboard.createCursorKeys();
         this.arrow_move(cursors, this.player);
@@ -203,4 +215,3 @@ class MainScene extends Phaser.Scene {
     }
     
 }
-
