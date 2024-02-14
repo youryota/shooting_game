@@ -6,6 +6,9 @@ class MainScene extends Phaser.Scene {
         this.restartText;
         this.canCollide = true; // 衝突検出の制御用フラグ
         this.playerCanMove = true; // プレイヤーの移動を制御するフラグ
+        this.enemyCount = 0; // 破壊したエネミーの数
+        this.enemyCountText; // エネミーの数を表示するテキスト
+        this.gameOver = false; // ゲームオーバーかどうかのフラグ
     }
 
     preload() {
@@ -51,7 +54,10 @@ class MainScene extends Phaser.Scene {
         });
 
         // ライフのテキスト表示
-        this.playerLifeText = this.add.text(D_WIDTH - 100, 20, 'Life: 3', { fontSize: '24px', fill: '#fff' });
+        this.playerLifeText = this.add.text(20, 20, 'Life: 3', { fontSize: '24px', fill: '#fff' });
+
+        // 破壊したエネミーの数を表示するテキストを追加
+        this.enemyCountText = this.add.text(20, 50, 'Enemies: 0', { fontSize: '24px', fill: '#fff' });
 
         // リスタートのテキスト表示
         this.restartText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press R to restart', { fontSize: '32px', fill: '#fff' });
@@ -121,23 +127,34 @@ class MainScene extends Phaser.Scene {
         bullet.y = -100;
         bullet.enableBody(true, bullet.x, bullet.y, true, true); // バレットの物理的なボディを有効にする
     
-        // 新しいエネミーをランダムな位置に生成
-        const enemyX = Phaser.Math.Between(0, D_WIDTH);
-        const enemyY = Phaser.Math.Between(0, D_HEIGHT);
-        this.enemy.setPosition(enemyX, enemyY);
-        this.enemy.setActive(true).setVisible(true);
+        // 破壊したエネミーの数を増やす
+        this.enemyCount++;
+        this.enemyCountText.setText('Enemies: ' + this.enemyCount);
+    
+        // ゲームクリアの条件をチェック
+        if (this.enemyCount >= 10) {
+            this.showGameClearText();
+        } else {
+            // 新しいエネミーをランダムな位置に生成
+            const enemyX = Phaser.Math.Between(0, D_WIDTH);
+            const enemyY = Phaser.Math.Between(0, D_HEIGHT);
+            this.enemy.setPosition(enemyX, enemyY);
+            this.enemy.setActive(true).setVisible(true);
+        }
     }
+    
     
     enemyCollision(player, enemy) {
         console.log("Enemy collided with player!"); 
         // 衝突検出が行われた後、衝突検出を無効化する
         this.canCollide = false;
-    
+
         // プレイヤーと敵が衝突したときの処理
         this.playerLife--; // ライフを減らす
+        this.playerLife = Math.max(0, this.playerLife); // ライフが 0 未満にならないようにする
         this.playerLifeText.setText('Life: ' + this.playerLife); // ライフの表示を更新
-    
-        if (this.playerLife <= 0) {
+
+        if (this.playerLife === 0) {
             // ライフがなくなったらリスタートテキストを表示する
             this.restartText.setVisible(true);
             // プレイヤーの移動を無効化する
@@ -148,21 +165,42 @@ class MainScene extends Phaser.Scene {
                 this.restartGame();
             });
         }
-    
+
         // 衝突検出の無効化を解除するために、一定時間後に有効にする
         this.time.delayedCall(1000, () => {
             this.canCollide = true;
         });
     }
 
+
+    showGameClearText() {
+        this.restartText.setText('Game Clear! Press R to restart');
+        this.restartText.setVisible(true);
+        this.playerCanMove = false; // プレイヤーの移動を無効化する
+        this.gameOver = true; // ゲームオーバーフラグを設定
+        this.enemy.setVelocity(0, 0); // エネミーの移動を停止する
+        this.input.keyboard.on('keydown-R', () => {
+            // Rキーが押されたときの処理
+            if (this.gameOver) {
+                this.restartGame();
+            }
+        });
+    }
+    
     restartGame() {
         // ゲームをリスタートする処理
         this.restartText.setVisible(false); // リスタートテキストを非表示にする
         this.playerLife = 3;
         this.playerLifeText.setText('Life: ' + this.playerLife);
+        this.enemyCount = 0; // 破壊したエネミーの数をリセット
+        this.enemyCountText.setText('Enemies: 0');
+        this.gameOver = false; // ゲームオーバーフラグをリセット
         this.player.setPosition(D_WIDTH / 2, 700); // プレイヤーの初期位置に戻す
         this.enemy.setPosition(D_WIDTH / 2, 100); // 敵の初期位置に戻す
         this.canCollide = true; // 衝突検出を有効にする
         this.playerCanMove = true; // プレイヤーの移動を有効にする
+        this.enemy.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(-200, 200)); // エネミーのランダムな移動を再開する
     }
+    
 }
+
