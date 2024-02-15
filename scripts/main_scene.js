@@ -46,6 +46,7 @@ class MainScene extends Phaser.Scene {
         player.setCollideWorldBounds(true);
     
         const enemy2 = this.physics.add.sprite(D_WIDTH / 2, 100, 'enemy2');
+        enemy2.angle = 180;
     
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.spaceText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press SPACE to start', { fontSize: '32px', fill: '#fff' });
