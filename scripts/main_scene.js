@@ -4,11 +4,14 @@ class MainScene extends Phaser.Scene {
         this.playerLife = 3;
         this.playerLifeText;
         this.restartText;
-        this.canCollide = true; // 衝突検出の制御用フラグ
-        this.playerCanMove = true; // プレイヤーの移動を制御するフラグ
-        this.enemyCount = 0; // 破壊したエネミーの数
-        this.enemyCountText; // エネミーの数を表示するテキスト
-        this.gameOver = false; // ゲームオーバーかどうかのフラグ
+        this.canCollide = true; 
+        this.playerCanMove = true; 
+        this.enemyCount = 0; 
+        this.enemyCountText; 
+        this.gameOver = false; 
+        this.enemy2Timer; 
+        this.gameStarted = false; 
+        this.enemyBullet; 
     }
 
     preload() {
@@ -16,12 +19,16 @@ class MainScene extends Phaser.Scene {
         this.load.image('player', 'assets/player.png');
         this.load.image('enemy', 'assets/enemy_1.png');
         this.load.image('enemy2', 'assets/enemy_2.png');
+        this.load.image('enemy_bullet', 'assets/teki_tama.png');
         this.load.image('bullet', 'assets/player_tama.png');
     }
 
     create() {
+        const D_WIDTH = this.game.config.width;
+        const D_HEIGHT = this.game.config.height;
+
         this.physics.world.setBounds(0, 0, D_WIDTH, D_HEIGHT);
-        this.physics.start(); // 物理エンジンを有効化する
+        this.physics.start(); 
     
         const background = this.add.image(D_WIDTH / 2, D_HEIGHT / 2, 'background');
         background.setDisplaySize(D_WIDTH, D_HEIGHT);
@@ -29,7 +36,6 @@ class MainScene extends Phaser.Scene {
         const player = this.physics.add.sprite(D_WIDTH / 2, 700, 'player');
         this.player = player;
     
-        // エネミーの初期位置をランダムに設定
         const enemyX = Phaser.Math.Between(0, D_WIDTH);
         const enemyY = Phaser.Math.Between(0, D_HEIGHT);
         const enemy = this.physics.add.sprite(enemyX, enemyY, 'enemy');
@@ -58,21 +64,29 @@ class MainScene extends Phaser.Scene {
             child.setActive(false).setVisible(false);
         });
 
-        // ライフのテキスト表示
+
         this.playerLifeText = this.add.text(20, 20, 'Life: 3', { fontSize: '24px', fill: '#fff' });
 
-        // 破壊したエネミーの数を表示するテキストを追加
         this.enemyCountText = this.add.text(20, 50, 'Enemies: 0', { fontSize: '24px', fill: '#fff' });
 
-        // リスタートのテキスト表示
+
         this.restartText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press R to restart', { fontSize: '32px', fill: '#fff' });
         this.restartText.setOrigin(0.5);
-        this.restartText.setVisible(false); // 最初は非表示にしておく
+        this.restartText.setVisible(false); 
+
+        this.enemyBullet = this.physics.add.group();
     }
 
     startGame() {
         this.spaceText.setVisible(false);
         this.gameStarted = true;
+
+        this.enemy2Timer = this.time.addEvent({
+            delay: 3000,
+            loop: true,
+            callback: this.fireEnemyBullet,
+            callbackScope: this
+        });
     }
 
     arrow_move(cursors, object) {
@@ -89,7 +103,7 @@ class MainScene extends Phaser.Scene {
                 object.setVelocity(0, 0);
             }
         } else {
-            object.setVelocity(0, 0); // 移動を停止する
+            object.setVelocity(0, 0); 
         }
     }
 
@@ -111,74 +125,63 @@ class MainScene extends Phaser.Scene {
 
         this.bullets.children.iterate(bullet => {
             if (bullet.active) {
-                if (bullet.y < 0 || bullet.y > D_HEIGHT || bullet.x < 0 || bullet.x > D_WIDTH) {
+                if (bullet.y < 0 || bullet.y > this.game.config.height || bullet.x < 0 || bullet.x > this.game.config.width) {
                     bullet.setActive(false).setVisible(false);
                 }
             }
         });
 
-        // プレイヤーと敵の衝突判定
-        if (this.canCollide) { // 衝突が有効な場合にのみ衝突検出を行う
+       
+        if (this.canCollide) { 
             this.physics.overlap(this.player, this.enemy, this.enemyCollision, null, this);
         }
 
-        // 敵の動き
         let direction = new Phaser.Math.Vector2(this.player.x - this.enemy.x, this.player.y - this.enemy.y);
         direction.normalize();
         this.enemy.setVelocity(direction.x * 200, direction.y * 200);
 
-        // 敵とプレイヤーの弾の衝突判定
         this.physics.overlap(this.bullets, this.enemy, this.bulletEnemyCollision, null, this);
+
+        this.physics.overlap(this.player, this.enemyBullet, this.playerEnemyBulletCollision, null, this);
     }
 
     bulletEnemyCollision(bullet, enemy) {
-        bullet.setActive(false).setVisible(false); // バレットを非アクティブにする
-        enemy.setActive(false).setVisible(false); // 敵を非アクティブにする
+        bullet.setActive(false).setVisible(false); 
+        enemy.setActive(false).setVisible(false);
     
-        bullet.x = -100; // 画面外に配置して位置をリセット
+        bullet.x = -100;
         bullet.y = -100;
-        bullet.enableBody(true, bullet.x, bullet.y, true, true); // バレットの物理的なボディを有効にする
+        bullet.enableBody(true, bullet.x, bullet.y, true, true); 
     
-        // 破壊したエネミーの数を増やす
         this.enemyCount++;
         this.enemyCountText.setText('Enemies: ' + this.enemyCount);
     
-        // ゲームクリアの条件をチェック
         if (this.enemyCount >= 10) {
             this.showGameClearText();
         } else {
-            // 新しいエネミーをランダムな位置に生成
-            const enemyX = Phaser.Math.Between(0, D_WIDTH);
-            const enemyY = Phaser.Math.Between(0, D_HEIGHT);
+            const enemyX = Phaser.Math.Between(0, this.game.config.width);
+            const enemyY = Phaser.Math.Between(0, this.game.config.height);
             this.enemy.setPosition(enemyX, enemyY);
             this.enemy.setActive(true).setVisible(true);
         }
     }
     
-    
     enemyCollision(player, enemy) {
         console.log("Enemy collided with player!"); 
-        // 衝突検出が行われた後、衝突検出を無効化する
         this.canCollide = false;
 
-        // プレイヤーと敵が衝突したときの処理
-        this.playerLife--; // ライフを減らす
-        this.playerLife = Math.max(0, this.playerLife); // ライフが 0 未満にならないようにする
-        this.playerLifeText.setText('Life: ' + this.playerLife); // ライフの表示を更新
+        this.playerLife--; 
+        this.playerLife = Math.max(0, this.playerLife); 
+        this.playerLifeText.setText('Life: ' + this.playerLife);
 
         if (this.playerLife === 0) {
-            // ライフがなくなったらリスタートテキストを表示する
             this.restartText.setVisible(true);
-            // プレイヤーの移動を無効化する
             this.playerCanMove = false;
-            // キーボードイベントを追加する
             this.input.keyboard.on('keydown-R', () => {
-                // Rキーが押されたときの処理
                 this.restartGame();
             });
         }
 
-        // 衝突検出の無効化を解除するために、一定時間後に有効にする
         this.time.delayedCall(1000, () => {
             this.canCollide = true;
         });
@@ -188,11 +191,10 @@ class MainScene extends Phaser.Scene {
     showGameClearText() {
         this.restartText.setText('Game Clear! Press R to restart');
         this.restartText.setVisible(true);
-        this.playerCanMove = false; // プレイヤーの移動を無効化する
-        this.gameOver = true; // ゲームオーバーフラグを設定
-        this.enemy.setVelocity(0, 0); // エネミーの移動を停止する
+        this.playerCanMove = false;
+        this.gameOver = true; 
+        this.enemy.setVelocity(0, 0); 
         this.input.keyboard.on('keydown-R', () => {
-            // Rキーが押されたときの処理
             if (this.gameOver) {
                 this.restartGame();
             }
@@ -200,18 +202,51 @@ class MainScene extends Phaser.Scene {
     }
     
     restartGame() {
-        // ゲームをリスタートする処理
-        this.restartText.setVisible(false); // リスタートテキストを非表示にする
+        this.restartText.setVisible(false);
         this.playerLife = 3;
         this.playerLifeText.setText('Life: ' + this.playerLife);
-        this.enemyCount = 0; // 破壊したエネミーの数をリセット
+        this.enemyCount = 0; 
         this.enemyCountText.setText('Enemies: 0');
-        this.gameOver = false; // ゲームオーバーフラグをリセット
-        this.player.setPosition(D_WIDTH / 2, 700); // プレイヤーの初期位置に戻す
-        this.enemy.setPosition(D_WIDTH / 2, 100); // 敵の初期位置に戻す
-        this.canCollide = true; // 衝突検出を有効にする
-        this.playerCanMove = true; // プレイヤーの移動を有効にする
-        this.enemy.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(-200, 200)); // エネミーのランダムな移動を再開する
+        this.gameOver = false; 
+        this.player.setPosition(this.game.config.width / 2, 700); 
+        this.enemy.setPosition(this.game.config.width / 2, 100); 
+        this.canCollide = true; 
+        this.playerCanMove = true;
+        this.enemy.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(-200, 200));
+    }
+
+    fireEnemyBullet() {
+        if (!this.gameStarted) return; 
+    
+        const D_WIDTH = this.game.config.width;
+        const D_HEIGHT = this.game.config.height;
+    
+        if (this.playerLife > 0) { 
+            const bullet1 = this.enemyBullet.create(D_WIDTH / 2, 100, 'enemy_bullet');
+            bullet1.setVelocityY(200); 
+    
+            const bullet2 = this.enemyBullet.create(1600, 100, 'enemy_bullet');
+            bullet2.setVelocityY(200);
+    
+            const bullet3 = this.enemyBullet.create(200, 100, 'enemy_bullet');
+            bullet3.setVelocityY(200);
+        }
+    }
+    
+
+    playerEnemyBulletCollision(player, enemyBullet) {
+        enemyBullet.disableBody(true, true);
+        this.playerLife--; 
+        this.playerLife = Math.max(0, this.playerLife); 
+        this.playerLifeText.setText('Life: ' + this.playerLife);
+    
+        if (this.playerLife === 0) {
+            this.restartText.setVisible(true); 
+            this.playerCanMove = false; 
+            this.input.keyboard.on('keydown-R', () => {
+                this.restartGame(); 
+            });
+        }
     }
     
 }
