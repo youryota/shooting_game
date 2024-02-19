@@ -252,6 +252,14 @@ class MainScene extends Phaser.Scene {
             const bullet3 = this.enemyBullet.create(this.enemy2.x + 50, this.enemy2.y, 'enemy_bullet');
             bullet3.setVelocityY(200);
         }
+    
+        // タイマーイベントを再設定し、次の弾の発射を予約する
+        this.enemy2Timer.reset({
+            delay: 3000, // 3秒間隔で発射
+            callback: this.fireEnemyBullet,
+            callbackScope: this,
+            loop: false // 一度だけ実行する
+        });
     }
     
 
