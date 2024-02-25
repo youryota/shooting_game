@@ -8,7 +8,7 @@ class MainScene extends Phaser.Scene {
         this.playerCanMove = true;
         this.enemyCount = 0;
         this.enemyCountText;
-        this.gameOver = false; 
+        this.gameOver = false;
         this.enemy2Timer;
         this.gameStarted = false;
         this.enemyBullet;
@@ -28,27 +28,26 @@ class MainScene extends Phaser.Scene {
         const D_HEIGHT = this.game.config.height;
 
         this.physics.world.setBounds(0, 0, D_WIDTH, D_HEIGHT);
-        this.physics.start();
-    
+
         const background = this.add.image(D_WIDTH / 2, D_HEIGHT / 2, 'background');
         background.setDisplaySize(D_WIDTH, D_HEIGHT);
-    
+
         const player = this.physics.add.sprite(D_WIDTH / 2, 700, 'player');
         this.player = player;
-    
+
         const enemyX = Phaser.Math.Between(0, D_WIDTH);
         const enemyY = Phaser.Math.Between(0, D_HEIGHT);
         const enemy = this.physics.add.sprite(enemyX, enemyY, 'enemy');
         enemy.angle = 180;
         this.enemy = enemy;
         this.enemyInitialRotation = this.enemy.angle;
-    
+
         player.setCollideWorldBounds(true);
-    
+
         const enemy2 = this.physics.add.sprite(D_WIDTH / 2, 100, 'enemy2');
-        this.enemy2 = enemy2; 
+        this.enemy2 = enemy2;
         enemy2.angle = 180;
-    
+
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.spaceText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press SPACE to start', { fontSize: '32px', fill: '#fff' });
         this.spaceText.setOrigin(0.5);
@@ -72,22 +71,22 @@ class MainScene extends Phaser.Scene {
 
         this.restartText = this.add.text(D_WIDTH / 2, D_HEIGHT / 2, 'Press R to restart', { fontSize: '32px', fill: '#fff' });
         this.restartText.setOrigin(0.5);
-        this.restartText.setVisible(false); 
+        this.restartText.setVisible(false);
 
         this.enemyBullet = this.physics.add.group();
-    }
-
-    startGame() {
-        this.spaceText.setVisible(false);
-        this.gameStarted = true;
-
         this.enemy2Timer = this.time.addEvent({
-            delay: 3000,
+            delay: 5000,
             loop: true,
             callback: this.fireEnemyBullet,
             callbackScope: this
         });
     }
+
+    startGame() {
+        this.spaceText.setVisible(false);
+        this.gameStarted = true;
+    }
+    
 
     arrow_move(cursors, object) {
         if (this.playerCanMove) {
@@ -109,7 +108,7 @@ class MainScene extends Phaser.Scene {
 
     update(time, delta) {
         if (!this.gameStarted) return;
-        
+
         this.physics.overlap(this.bullets, this.enemy, this.bulletEnemyCollision, null, this);
         let cursors = this.input.keyboard.createCursorKeys();
         this.arrow_move(cursors, this.player);
@@ -147,14 +146,14 @@ class MainScene extends Phaser.Scene {
     bulletEnemyCollision(bullet, enemy) {
         bullet.setActive(false).setVisible(false);
         enemy.setActive(false).setVisible(false);
-    
+
         bullet.x = -100;
         bullet.y = -100;
         bullet.enableBody(true, bullet.x, bullet.y, true, true);
-    
+
         this.enemyCount++;
         this.enemyCountText.setText('Enemies: ' + this.enemyCount);
-    
+
         if (this.enemyCount >= 10) {
             this.showGameClearText();
         } else {
@@ -164,21 +163,17 @@ class MainScene extends Phaser.Scene {
             this.enemy.setActive(true).setVisible(true);
         }
     }
-    
+
     enemyCollision(player, enemy) {
-        console.log("Enemy collided with player!"); 
+        console.log("Enemy collided with player!");
         this.canCollide = false;
 
         this.playerLife--;
         this.playerLife = Math.max(0, this.playerLife);
-        this.playerLifeText.setText('Life: ' + this.playerLife); 
+        this.playerLifeText.setText('Life: ' + this.playerLife);
 
         if (this.playerLife === 0) {
-            this.restartText.setVisible(true);
-            this.playerCanMove = false;
-            this.input.keyboard.on('keydown-R', () => {
-                this.restartGame();
-            });
+            this.showRestartText();
         }
 
         this.time.delayedCall(1000, () => {
@@ -186,9 +181,8 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-
-    showGameClearText() {
-        this.restartText.setText('Game Clear! Press R to restart');
+    showRestartText() {
+        this.restartText.setText('Game Over! Press R to restart');
         this.restartText.setVisible(true);
         this.playerCanMove = false;
         this.gameOver = true;
@@ -199,7 +193,24 @@ class MainScene extends Phaser.Scene {
             }
         });
     }
-    
+
+    showGameClearText() {
+        this.restartText.setText('Game Clear! Press R to restart');
+        this.restartText.setVisible(true);
+        this.playerCanMove = false;
+        this.gameOver = true;
+        this.enemy.setVelocity(0, 0);
+        this.enemyBullet.children.each(function (bullet) {
+            bullet.disableBody(true, true);
+        });
+        this.physics.pause();
+        this.input.keyboard.on('keydown-R', () => {
+            if (this.gameOver) {
+                this.restartGame();
+            }
+        });
+    }
+
     restartGame() {
         this.restartText.setVisible(false);
         this.playerLife = 3;
@@ -207,20 +218,24 @@ class MainScene extends Phaser.Scene {
         this.enemyCount = 0;
         this.enemyCountText.setText('Enemies: 0');
         this.gameOver = false;
-        this.player.setPosition(this.game.config.width / 2, 700); 
+        this.player.setPosition(this.game.config.width / 2, 700);
         this.enemy.setPosition(this.game.config.width / 2, 100);
         this.canCollide = true;
         this.playerCanMove = true;
         this.enemy.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(-200, 200));
+        this.enemyBullet.clear(true, true);
+        this.physics.resume();
+        this.enemy2Timer.paused = false;
     }
 
+
     fireEnemyBullet() {
-        if (!this.gameStarted) return; 
+        if (!this.gameStarted) return;
     
         const D_WIDTH = this.game.config.width;
         const D_HEIGHT = this.game.config.height;
     
-        if (this.playerLife > 0) {
+        if (this.playerLife > 0 && this.enemyCount < 10) {
             const bullet1 = this.enemyBullet.create(this.enemy2.x, this.enemy2.y, 'enemy_bullet');
             bullet1.setVelocityY(200);
     
@@ -230,29 +245,15 @@ class MainScene extends Phaser.Scene {
             const bullet3 = this.enemyBullet.create(this.enemy2.x + 50, this.enemy2.y, 'enemy_bullet');
             bullet3.setVelocityY(200);
         }
-    
-        this.enemy2Timer.reset({
-            delay: 3000,
-            callback: this.fireEnemyBullet,
-            callbackScope: this,
-            loop: false
-        });
     }
-    
 
     playerEnemyBulletCollision(player, enemyBullet) {
         enemyBullet.disableBody(true, true);
         this.playerLife--;
-        this.playerLife = Math.max(0, this.playerLife); 
         this.playerLifeText.setText('Life: ' + this.playerLife);
-    
+
         if (this.playerLife === 0) {
-            this.restartText.setVisible(true);
-            this.playerCanMove = false;
-            this.input.keyboard.on('keydown-R', () => {
-                this.restartGame();
-            });
+            this.showRestartText();
         }
     }
-    
 }
